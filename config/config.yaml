@@ -1,1 +1,58 @@
+project:
+  name: "GeoReason-EO"
+  version: "0.1.0"
+  description: >
+    Temporal Earth Observation reasoning using
+    Copernicus Sentinel-2 data, Prithvi GeoFM
+    representations and an open-weight LLM.
 
+deployment:
+  mode: demo
+
+cdse:
+  stac_url: "https://stac.dataspace.copernicus.eu/v1/"
+
+  collections:
+    sentinel2: "sentinel-2-l2a"
+
+  max_cloud_cover: 30
+
+geofm:
+  model_id: "ibm-nasa-geospatial/Prithvi-EO-1.0-100M"
+
+  device: "auto"
+
+  temporal:
+    observations: 4
+
+  embedding:
+    reduction: "pca"
+    components: 3
+
+analysis:
+  indices:
+    - ndvi
+    - ndmi
+    - evi
+
+  temporal:
+    calculate_slope: true
+    calculate_variance: true
+    calculate_change: true
+
+  embedding:
+    distance: "cosine"
+
+llm:
+  provider: "ollama"
+  model: "qwen3"
+  temperature: 0.0
+  max_steps: 8
+
+application:
+  default_task: "temporal_change"
+
+  cache_directory: "./cache"
+
+  demo:
+    enabled: true

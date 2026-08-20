@@ -1,1 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
 
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Model/cache files
+cache/
+models_cache/
+hf_cache/
+
+# EO data
+data/raw/
+data/processed/
+*.tif
+*.tiff
+*.jp2
+*.nc
+*.h5
+
+# Outputs
+outputs/
+results/
+logs/
+
+# Temporary
+tmp/
+temp/
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
