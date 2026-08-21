@@ -60,3 +60,34 @@ Evidence Object
          │
          ▼
 LLM Scientific Interpretation
+
+                   Qwen3
+                     │
+             ┌───────┴───────┐
+             │   tool call   │
+             ▼               │
+        search_cdse          │
+             │               │
+             ▼               │
+          CDSE/STAC          │
+             │               │
+             ▼               │
+         Sentinel-2          │
+             │               │
+             ▼               │
+          Prithvi            │
+             │               │
+             ▼               │
+       temporal analysis     │
+             │               │
+             ▼               │
+       physics checks        │
+             │               │
+             ▼               │
+        EvidenceObject ──────┘
+                     │
+                     ▼
+                 Qwen3
+                     │
+                     ▼
+          scientific explanation
