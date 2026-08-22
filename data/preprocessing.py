@@ -9,8 +9,22 @@ import numpy as np
 import rasterio
 import torch
 
-PRITHVI_BANDS = ["B02", "B03", "B04", "B05", "B06", "B07"]
-ALL_BANDS = PRITHVI_BANDS + ["B08", "B11", "SCL", "dataMask"]
+#PRITHVI_BANDS = ["B02", "B03", "B04", "B05", "B06", "B07"]
+#ALL_BANDS = PRITHVI_BANDS + ["B08", "B11", "SCL", "dataMask"]
+PRITHVI_BANDS = [
+    "B02",
+    "B03",
+    "B04",
+    "B8A",
+    "B11",
+    "B12",
+]
+
+ALL_BANDS = PRITHVI_BANDS + [
+    "B08",
+    "SCL",
+    "dataMask",
+]
 
 PRITHVI_MEAN = np.array(
     [
@@ -88,8 +102,10 @@ def prepare_prithvi_tensor(
 
 
 def valid_surface_mask(frame: np.ndarray) -> np.ndarray:
-    scl = frame[8].astype(np.int16)
-    data_mask = frame[9] > 0
+    #scl = frame[8].astype(np.int16)
+    #data_mask = frame[9] > 0
+    scl = frame[7].astype(np.int16)
+    data_mask = frame[8] > 0
     invalid_scl = np.isin(scl, [0, 1, 3, 8, 9, 10, 11])
     return data_mask & (~invalid_scl)
 
@@ -106,8 +122,10 @@ def spectral_indices(frame: np.ndarray) -> dict:
 
     b02 = frame[0] / 10000.0
     b04 = frame[2] / 10000.0
+    #b08 = frame[6] / 10000.0
+    #b11 = frame[7] / 10000.0
+    b11 = frame[4] / 10000.0
     b08 = frame[6] / 10000.0
-    b11 = frame[7] / 10000.0
 
     ndvi = _safe_ratio(b08 - b04, b08 + b04)
     ndmi = _safe_ratio(b08 - b11, b08 + b11)
