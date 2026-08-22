@@ -93,9 +93,28 @@ function evaluatePixel(s) {
 """
 
 
-def _cache_name(bbox: Iterable[float], date: str, width: int, height: int) -> str:
-    key = f"{list(bbox)}|{date}|{width}|{height}".encode("utf-8")
+def _cache_name(
+    bbox: Iterable[float],
+    date: str,
+    width: int,
+    height: int,
+) -> str:
+    # Include the requested spectral configuration in the cache key.
+    # This prevents an old TIFF with a different band layout from
+    # being silently reused after OUTPUT_BANDS changes.
+    band_signature = ",".join(OUTPUT_BANDS)
+
+    key = (
+        f"{list(bbox)}|"
+        f"{date}|"
+        f"{width}|"
+        f"{height}|"
+        f"{band_signature}|"
+        f"v2"
+    ).encode("utf-8")
+
     digest = hashlib.sha1(key).hexdigest()[:12]
+
     return f"s2_{date}_{digest}.tif"
 
 

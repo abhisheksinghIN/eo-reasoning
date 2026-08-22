@@ -68,7 +68,9 @@ def read_process_tiff(path: str | Path) -> np.ndarray:
 def prepare_prithvi_frame(frame: np.ndarray) -> np.ndarray:
     frame = np.asarray(frame)
     if frame.ndim != 3 or frame.shape[0] != len(ALL_BANDS):
-        raise ValueError(f"Expected frame [10,H,W], received {frame.shape}.")
+        raise ValueError(
+            f"Expected frame [{len(ALL_BANDS)},H,W], received {frame.shape}."
+        )
 
     x = frame[:6].astype(np.float32)
     data_mask = frame[9] > 0
