@@ -1,4 +1,4 @@
-"""Prithvi-EO-1.0-100M encoder wrapper."""
+"""Prithvi-EO-1.0-100M encoder wrapper using TerraTorch."""
 
 from __future__ import annotations
 
@@ -6,53 +6,148 @@ from dataclasses import dataclass
 from typing import Optional
 
 import torch
+from terratorch import BACKBONE_REGISTRY
+
 from models.temporal_encoder import TemporalEncoder
 
-DEFAULT_MODEL_ID = "ibm-nasa-geospatial/Prithvi-EO-1.0-100M"
+
+DEFAULT_MODEL_NAME = "prithvi_eo_v1_100"
 
 
 @dataclass
 class PrithviConfig:
-    model_id: str = DEFAULT_MODEL_ID
+    model_name: str = DEFAULT_MODEL_NAME
     device: Optional[str] = None
+    num_frames: int = 3
+    image_size: int = 224
+    spatial_patch_size: int = 16
 
 
 class PrithviModel:
     def __init__(self, config: Optional[PrithviConfig] = None):
         self.config = config or PrithviConfig()
-        self.device = self.config.device or ("cuda" if torch.cuda.is_available() else "cpu")
 
-        kwargs = {}
-        if self.device == "cuda":
-            kwargs["device_map"] = "auto"
+        self.device = self.config.device or (
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
 
-        from transformers import AutoModel
-        self.model = AutoModel.from_pretrained(self.config.model_id, **kwargs)
-        if self.device == "cpu":
-            self.model = self.model.to(self.device)
+        print(
+            f"Loading {self.config.model_name} "
+            f"on device={self.device}"
+        )
 
+        self.model = BACKBONE_REGISTRY.build(
+            self.config.model_name,
+            pretrained=True,
+            num_frames=self.config.num_frames,
+        )
+
+        self.model = self.model.to(self.device)
         self.model.eval()
-        self.temporal_pooler = TemporalEncoder(num_frames=3, image_size=224, spatial_patch_size=16)
+
+        self.temporal_pooler = TemporalEncoder(
+            num_frames=self.config.num_frames,
+            image_size=self.config.image_size,
+            spatial_patch_size=self.config.spatial_patch_size,
+        )
 
     @torch.inference_mode()
     def encode(self, pixel_values: torch.Tensor) -> torch.Tensor:
-        x = pixel_values.to(self.device)
-        output = self.model(pixel_values=x)
+        """
+        Extract the final transformer token representation.
 
-        if hasattr(output, "last_hidden_state"):
-            return output.last_hidden_state
-        if isinstance(output, (tuple, list)) and output:
-            return output[0]
-        if torch.is_tensor(output):
-            return output
+        Expected input:
+            pixel_values: [B, C, T, H, W]
 
-        raise TypeError(f"Could not extract hidden states from output type {type(output)!r}")
+        For this MVP:
+            [B, 6, 3, 224, 224]
+
+        Returns:
+            Tensor [B, L, D]
+        """
+
+        if pixel_values.ndim != 5:
+            raise ValueError(
+                "Prithvi input must have shape [B, C, T, H, W]. "
+                f"Received {tuple(pixel_values.shape)}"
+            )
+
+        if pixel_values.shape[1] != 6:
+            raise ValueError(
+                "Prithvi-EO v1 expects 6 spectral channels. "
+                f"Received {pixel_values.shape[1]}."
+            )
+
+        if pixel_values.shape[2] != self.config.num_frames:
+            raise ValueError(
+                f"Expected {self.config.num_frames} temporal frames, "
+                f"received {pixel_values.shape[2]}."
+            )
+
+        x = pixel_values.to(
+            self.device,
+            dtype=torch.float32,
+        )
+
+        # TerraTorch's Prithvi backbone exposes forward_features(),
+        # which returns one token tensor per transformer layer.
+        features = self.model.forward_features(x)
+
+        if not isinstance(features, (list, tuple)):
+            raise TypeError(
+                "Expected TerraTorch Prithvi forward_features() "
+                f"to return a list/tuple, got {type(features)!r}."
+            )
+
+        if len(features) == 0:
+            raise RuntimeError(
+                "Prithvi returned no transformer features."
+            )
+
+        hidden = features[-1]
+
+        if not torch.is_tensor(hidden):
+            raise TypeError(
+                "Expected final Prithvi feature to be a tensor, "
+                f"got {type(hidden)!r}."
+            )
+
+        if hidden.ndim != 3:
+            raise ValueError(
+                "Expected final Prithvi feature shape [B, L, D], "
+                f"got {tuple(hidden.shape)}."
+            )
+
+        return hidden
 
     @torch.inference_mode()
-    def temporal_embeddings(self, pixel_values: torch.Tensor) -> torch.Tensor:
+    def temporal_embeddings(
+        self,
+        pixel_values: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Convert Prithvi tokens to one embedding per temporal frame.
+
+        Returns:
+            [B, T, D]
+        """
+
         hidden = self.encode(pixel_values)
+
         return self.temporal_pooler.pool(hidden)
 
     @torch.inference_mode()
-    def global_embedding(self, pixel_values: torch.Tensor) -> torch.Tensor:
-        return self.temporal_embeddings(pixel_values).mean(dim=1)
+    def global_embedding(
+        self,
+        pixel_values: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Return one global embedding for the temporal sequence.
+
+        Returns:
+            [B, D]
+        """
+
+        temporal = self.temporal_embeddings(pixel_values)
+
+        return temporal.mean(dim=1)
