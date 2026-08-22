@@ -1,1 +1,1 @@
-
+"""Deterministic EO analysis functions."""

@@ -1,47 +1,30 @@
+"""Temporal change metrics for GeoFM embeddings."""
+
+from __future__ import annotations
+
 import numpy as np
 
-
-def cosine_distance(a, b):
-    """
-    Compute cosine distance between two embeddings.
-    """
-
-    a = np.asarray(a)
-    b = np.asarray(b)
-
-    denominator = (
-        np.linalg.norm(a) *
-        np.linalg.norm(b)
-    )
-
-    if denominator == 0:
-        return np.nan
-
-    similarity = np.dot(a, b) / denominator
-
-    return 1.0 - similarity
+from models.embeddings import cosine_distance, l2_change
 
 
-def embedding_change(
-    embedding_t1,
-    embedding_t2,
-):
-    """
-    Compute temporal representation change.
-    """
+def embedding_change(embeddings) -> dict:
+    z = np.asarray(embeddings, dtype=np.float64)
+    if z.ndim != 2 or len(z) < 2:
+        raise ValueError("Expected [T,D] embeddings with T>=2.")
 
-    embedding_t1 = np.asarray(
-        embedding_t1
-    )
+    consecutive = []
+    for i in range(1, len(z)):
+        consecutive.append({
+            "from_index": i - 1,
+            "to_index": i,
+            "cosine_distance": cosine_distance(z[i - 1], z[i]),
+            "l2_change": l2_change(z[i - 1], z[i]),
+        })
 
-    embedding_t2 = np.asarray(
-        embedding_t2
-    )
-
-    return np.array([
-        cosine_distance(a, b)
-        for a, b in zip(
-            embedding_t1,
-            embedding_t2
-        )
-    ])
+    return {
+        "consecutive": consecutive,
+        "start_end": {
+            "cosine_distance": cosine_distance(z[0], z[-1]),
+            "l2_change": l2_change(z[0], z[-1]),
+        },
+    }
