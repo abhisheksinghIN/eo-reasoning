@@ -59,13 +59,23 @@ def _evalscript() -> str:
 function setup() {
   return {
     input: [{
-      bands: ["B02","B03","B04","B05","B06","B07",
-              "B08","B11","SCL","dataMask"],
-      units: ["DN","DN","DN","DN","DN","DN",
-              "DN","DN","DN","DN"]
+      bands: [
+        "B02", "B03", "B04",
+        "B8A", "B11", "B12",
+        "B08",
+        "SCL",
+        "dataMask"
+      ],
+      units: [
+        "DN", "DN", "DN",
+        "DN", "DN", "DN",
+        "DN",
+        "DN",
+        "DN"
+      ]
     }],
     output: {
-      bands: 10,
+      bands: 9,
       sampleType: "UINT16"
     }
   };
@@ -73,8 +83,11 @@ function setup() {
 
 function evaluatePixel(s) {
   return [
-    s.B02, s.B03, s.B04, s.B05, s.B06, s.B07,
-    s.B08, s.B11, s.SCL, s.dataMask
+    s.B02, s.B03, s.B04,
+    s.B8A, s.B11, s.B12,
+    s.B08,
+    s.SCL,
+    s.dataMask
   ];
 }
 """
