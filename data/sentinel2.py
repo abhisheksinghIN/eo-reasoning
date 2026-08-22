@@ -12,11 +12,17 @@ from data.cdse_auth import get_access_token
 from data.stac_client import CDSESTACClient
 
 PROCESS_URL = "https://sh.dataspace.copernicus.eu/process/v1"
+#OUTPUT_BANDS = [
+#    "B02", "B03", "B04", "B05", "B06", "B07",
+#    "B08", "B11", "SCL", "dataMask",
+#]
 OUTPUT_BANDS = [
-    "B02", "B03", "B04", "B05", "B06", "B07",
-    "B08", "B11", "SCL", "dataMask",
+    "B02", "B03", "B04",
+    "B8A", "B11", "B12",
+    "B08",
+    "SCL",
+    "dataMask",
 ]
-
 
 def search_sentinel2(
     bbox: list,
