@@ -81,7 +81,8 @@ Purpose:
 - present a tool trace;
 - generate an evidence-grounded interpretation.
 
-<img width="1040" height="497" alt="image" src="https://github.com/user-attachments/assets/09c5ffd9-6eb6-4870-a05d-06d1961a64a4" />
+<img width="1040" height="497" alt="image" src="https://github.com/user-attachments/assets/d4ad3e66-a6cc-43ba-baea-a6d9adbd4508" />
+
 
 ---
 
