@@ -1,4 +1,4 @@
-"""Gradio interface for GeoReason-EO."""
+"""Gradio interface for EO-Reasoning."""
 
 from __future__ import annotations
 
@@ -63,15 +63,15 @@ def ui_agent(question):
         return f"Agent error: {type(exc).__name__}: {exc}", "[]"
 
 
-with gr.Blocks(title="GeoReason-EO") as demo:
+with gr.Blocks(title="EO-Reasoning") as demo:
     gr.Markdown(
         """
-# GeoReason-EO
+# EO-Reasoning
 ### Evidence-grounded temporal Earth Observation reasoning with Prithvi
 
-**CDSE → Sentinel-2 → Prithvi → spectral + embedding change → structured evidence**
+**CDSE → Data → GeoFM (Prithvi) → spectral + embedding change → evidence**
 
-The open-weight LLM is used only for **tool orchestration and interpretation**.
+- The open-weight LLM is used only for **tool orchestration and interpretation**.
 """
     )
 
@@ -106,7 +106,7 @@ The open-weight LLM is used only for **tool orchestration and interpretation**.
     with gr.Tab("3 · Agent"):
         gr.Markdown("Requires Ollama and a tool-calling model such as Qwen3.")
         question = gr.Textbox(label="EO question", lines=4)
-        agent_button = gr.Button("Ask GeoReason-EO")
+        agent_button = gr.Button("Ask EO-Reasoning")
         answer = gr.Markdown(label="Answer")
         trace = gr.Code(label="Tool trace", language="json")
         agent_button.click(ui_agent, inputs=question, outputs=[answer, trace])
