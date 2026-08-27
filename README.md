@@ -72,6 +72,7 @@ The current Prithvi v1 MVP requires exactly three temporal frames.
 <img width="1043" height="644" alt="image" src="https://github.com/user-attachments/assets/de6f40e8-b80c-4c45-84a8-d6323297fcdc" />
 
 ## 2.3 Agent`
+Prompt: "Investigate vegetation temporal change for bbox [11.25, 46.40, 11.40, 46.55] between 2026-06-01 and 2026-07-31."
 
 Purpose:
 
