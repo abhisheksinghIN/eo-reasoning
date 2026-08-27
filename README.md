@@ -38,7 +38,7 @@ The current implementation has successfully demonstrated:
 
 The Gradio application currently exposes three tabs.
 
-## 2.1 `1 · Find data`
+## 2.1 Find data`
 
 Purpose:
 
@@ -55,7 +55,7 @@ Typical AOI:
 ```
 <img width="1023" height="539" alt="image" src="https://github.com/user-attachments/assets/39e52045-0d78-4469-a915-34f7b4ebed29" />
 
-## 2.2 `2 · Deterministic analysis`
+## 2.2 Deterministic analysis`
 
 Purpose:
 
@@ -71,7 +71,7 @@ The current Prithvi v1 MVP requires exactly three temporal frames.
 
 <img width="1043" height="644" alt="image" src="https://github.com/user-attachments/assets/de6f40e8-b80c-4c45-84a8-d6323297fcdc" />
 
-## 2.3 `3 · Agent`
+## 2.3 Agent`
 
 Purpose:
 
