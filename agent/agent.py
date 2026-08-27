@@ -13,7 +13,7 @@ from agent.tool_registry import TOOL_FUNCTIONS, TOOL_SCHEMAS
 
 class EOAgent:
     def __init__(self, model: str | None = None, host: str | None = None, max_steps: int = 6):
-        self.model = model or os.getenv("OLLAMA_MODEL", "qwen3")
+        self.model = model or os.getenv("OLLAMA_MODEL", "qwen3:4b")
         self.host = host or os.getenv("OLLAMA_HOST", "http://localhost:11434")
         self.max_steps = max_steps
         self.client = Client(host=self.host)
