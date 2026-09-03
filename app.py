@@ -123,6 +123,30 @@ def ui_analyze(
         )
 
 
+#def ui_agent(question):
+#    try:
+#        result = EOAgent().run(question)
+#
+#        trace = json.dumps(
+#            result["trace"],
+#            indent=2,
+#            default=str,
+#        )
+#
+#        return (
+#            result["answer"],
+#            trace,
+#        )
+#
+#    except Exception as exc:
+#
+#        return (
+#            (
+#                f"Agent error: "
+#                f"{type(exc).__name__}: {exc}"
+#            ),
+#            "[]",
+#        )
 def ui_agent(question):
     try:
         result = EOAgent().run(question)
@@ -133,21 +157,30 @@ def ui_agent(question):
             default=str,
         )
 
+        artifacts = result.get(
+            "artifacts",
+            {},
+        )
+
+        prithvi_map = artifacts.get(
+            "prithvi_change_geotiff"
+        )
+
         return (
             result["answer"],
             trace,
+            prithvi_map,
         )
 
     except Exception as exc:
-
         return (
             (
                 f"Agent error: "
                 f"{type(exc).__name__}: {exc}"
             ),
             "[]",
+            None,
         )
-
 
 with gr.Blocks(
     title="EO-Reasoning"
@@ -309,6 +342,7 @@ The analysis produces:
             ],
         )
 
+
     # -----------------------------------------------------
     # TAB 3 — AGENT
     # -----------------------------------------------------
@@ -338,12 +372,17 @@ The analysis produces:
             language="json",
         )
 
+        prithvi_download = gr.File(
+            label="Download Prithvi Change Map"
+        )
+
         agent_button.click(
             ui_agent,
             inputs=question,
             outputs=[
                 answer,
                 trace,
+                prithvi_download,
             ],
         )
 
