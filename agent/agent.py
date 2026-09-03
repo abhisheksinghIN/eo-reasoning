@@ -1,9 +1,10 @@
-"""Minimal Ollama/Qwen tool-calling loop."""
+"""Ollama/Qwen tool-calling loop for EO reasoning."""
 
 from __future__ import annotations
 
 import json
 import os
+from datetime import date
 
 from ollama import Client
 
@@ -14,12 +15,68 @@ from agent.tool_registry import (
 )
 
 
+def _select_three_observations(items: list[dict]) -> list[str]:
+    """
+    Select three real Sentinel-2 acquisition dates with
+    temporal spread.
+
+    Strategy:
+        earliest
+        middle
+        latest
+    """
+
+    valid_items = [
+        item
+        for item in items
+        if item.get("date")
+    ]
+
+    if len(valid_items) < 3:
+        raise ValueError(
+            f"Need at least 3 Sentinel-2 observations; "
+            f"found {len(valid_items)}."
+        )
+
+    valid_items = sorted(
+        valid_items,
+        key=lambda item: date.fromisoformat(item["date"]),
+    )
+
+    first = valid_items[0]
+    last = valid_items[-1]
+
+    middle_index = len(valid_items) // 2
+
+    # Prefer a low-cloud observation around the
+    # temporal middle of the sequence.
+    candidates = valid_items[
+        max(1, middle_index - 1):
+        min(len(valid_items) - 1, middle_index + 2)
+    ]
+
+    middle = min(
+        candidates,
+        key=lambda item: (
+            item.get("cloud_cover")
+            if item.get("cloud_cover") is not None
+            else 100.0
+        ),
+    )
+
+    return [
+        first["date"],
+        middle["date"],
+        last["date"],
+    ]
+
+
 class EOAgent:
     def __init__(
         self,
         model: str | None = None,
         host: str | None = None,
-        max_steps: int = 6,
+        max_steps: int = 8,
     ):
         self.model = model or os.getenv(
             "OLLAMA_MODEL",
@@ -50,11 +107,6 @@ class EOAgent:
         trace = []
         artifacts = {}
 
-        # -------------------------------------------------
-        # Determine whether the user actually requested
-        # GeoFM / Prithvi analysis.
-        # -------------------------------------------------
-
         q = question.lower()
 
         analysis_requested = any(
@@ -72,8 +124,8 @@ class EOAgent:
 
         analysis_completed = False
 
-        # Store dates returned by Sentinel-2 search.
-        searched_dates: set[str] = set()
+        last_search_result = None
+        last_search_args = None
 
         for step in range(self.max_steps):
 
@@ -87,89 +139,169 @@ class EOAgent:
             messages.append(message)
 
             tool_calls = (
-                getattr(
-                    message,
-                    "tool_calls",
-                    None,
-                )
+                getattr(message, "tool_calls", None)
                 or []
             )
 
-            # =================================================
-            # Qwen wants to produce its final answer
-            # =================================================
+            # -------------------------------------------------
+            # Qwen is attempting to produce final answer
+            # -------------------------------------------------
 
             if not tool_calls:
 
-                # ---------------------------------------------
-                # Prevent premature completion.
-                # ---------------------------------------------
-
+                # If Prithvi was requested and search has already
+                # succeeded, deterministically complete analysis.
                 if (
                     analysis_requested
                     and not analysis_completed
+                    and last_search_result is not None
                 ):
 
-                    if searched_dates:
+                    items = last_search_result.get(
+                        "items",
+                        [],
+                    )
 
-                        if len(searched_dates) < 3:
-                            return {
-                                "answer": (
-                                    "Prithvi temporal analysis requires "
-                                    "three Sentinel-2 observations, but "
-                                    f"only {len(searched_dates)} suitable "
-                                    "acquisition date(s) were found."
-                                ),
-                                "trace": trace,
-                                "model": self.model,
-                                "artifacts": artifacts,
-                            }
-
-                        messages.append(
-                            {
-                                "role": "system",
-                                "content": (
-                                    "The requested GeoFM workflow is "
-                                    "not complete. You have searched "
-                                    "Sentinel-2 observations but have "
-                                    "not run Prithvi analysis. "
-                                    "Select exactly three acquisition "
-                                    "dates ONLY from the Sentinel-2 "
-                                    "dates already returned by the tool. "
-                                    "Prefer good temporal coverage. "
-                                    "Then call analyze_temporal_aoi. "
-                                    "Do not provide a final numerical "
-                                    "answer until that tool succeeds."
-                                ),
-                            }
+                    try:
+                        selected_dates = (
+                            _select_three_observations(items)
                         )
+                    except Exception as exc:
+                        return {
+                            "answer": (
+                                "Unable to select three suitable "
+                                "Sentinel-2 observations for "
+                                "Prithvi analysis."
+                            ),
+                            "trace": trace,
+                            "model": self.model,
+                            "artifacts": artifacts,
+                            "error": str(exc),
+                        }
+
+                    analyze_fn = TOOL_FUNCTIONS.get(
+                        "analyze_temporal_aoi"
+                    )
+
+                    if analyze_fn is None:
+                        return {
+                            "answer": (
+                                "The analyze_temporal_aoi tool "
+                                "is not registered."
+                            ),
+                            "trace": trace,
+                            "model": self.model,
+                            "artifacts": artifacts,
+                        }
+
+                    bbox = last_search_args.get("bbox")
+
+                    analyze_args = {
+                        "bbox": bbox,
+                        "dates": selected_dates,
+                    }
+
+                    try:
+                        result = analyze_fn(
+                            **analyze_args
+                        )
+
+                    except Exception as exc:
+                        result = {
+                            "error":
+                                type(exc).__name__,
+                            "message":
+                                str(exc),
+                        }
+
+                    if (
+                        isinstance(result, dict)
+                        and "error" not in result
+                    ):
+                        analysis_completed = True
+
+                        tool_artifacts = result.get(
+                            "artifacts",
+                            {},
+                        )
+
+                        if isinstance(
+                            tool_artifacts,
+                            dict,
+                        ):
+                            artifacts.update(
+                                tool_artifacts
+                            )
+
+                        result_summary = {
+                            "dates":
+                                result.get("dates"),
+
+                            "model":
+                                result.get(
+                                    "geofm",
+                                    {},
+                                ).get(
+                                    "model"
+                                ),
+
+                            "input_shape":
+                                result.get(
+                                    "geofm",
+                                    {},
+                                ).get(
+                                    "input_shape"
+                                ),
+
+                            "start_end_cosine_distance":
+                                result.get(
+                                    "geofm",
+                                    {},
+                                ).get(
+                                    "summary",
+                                    {},
+                                ).get(
+                                    "start_end_cosine_distance"
+                                ),
+
+                            "prithvi_change_geotiff":
+                                artifacts.get(
+                                    "prithvi_change_geotiff"
+                                ),
+                        }
 
                     else:
+                        result_summary = result
 
-                        messages.append(
-                            {
-                                "role": "system",
-                                "content": (
-                                    "The user requested Prithvi/GeoFM "
-                                    "analysis, but no deterministic "
-                                    "analysis has been executed. "
-                                    "Use the available EO tools. "
-                                    "If suitable acquisition dates are "
-                                    "not known, call search_sentinel2 "
-                                    "first. Then call "
-                                    "analyze_temporal_aoi with exactly "
-                                    "three actual acquisition dates. "
-                                    "Do not invent numerical results."
-                                ),
-                            }
-                        )
+                    trace.append(
+                        {
+                            "step": step + 1,
+                            "tool": "analyze_temporal_aoi",
+                            "arguments": analyze_args,
+                            "result_summary":
+                                result_summary,
+                            "selection_strategy":
+                                "deterministic_temporal_spread",
+                        }
+                    )
 
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_name":
+                                "analyze_temporal_aoi",
+                            "content": json.dumps(
+                                result,
+                                default=str,
+                            ),
+                        }
+                    )
+
+                    # Let Qwen interpret the real
+                    # deterministic Prithvi evidence.
                     continue
 
-                # ---------------------------------------------
-                # Safe final response
-                # ---------------------------------------------
-
+                # Safe final answer
                 return {
                     "answer": message.content,
                     "trace": trace,
@@ -177,9 +309,9 @@ class EOAgent:
                     "artifacts": artifacts,
                 }
 
-            # =================================================
-            # Execute Qwen tool calls
-            # =================================================
+            # -------------------------------------------------
+            # Execute Qwen-requested tools
+            # -------------------------------------------------
 
             for call in tool_calls:
 
@@ -195,75 +327,13 @@ class EOAgent:
 
                 fn = TOOL_FUNCTIONS.get(name)
 
-                # ---------------------------------------------
-                # Validate analyze_temporal_aoi dates
-                # ---------------------------------------------
-
-                if (
-                    name == "analyze_temporal_aoi"
-                    and searched_dates
-                ):
-
-                    requested_dates = args.get(
-                        "dates",
-                        [],
-                    )
-
-                    if len(requested_dates) != 3:
-
-                        result = {
-                            "error": "InvalidTemporalSelection",
-                            "message": (
-                                "Prithvi temporal analysis requires "
-                                "exactly three acquisition dates."
-                            ),
-                        }
-
-                    elif not all(
-                        date in searched_dates
-                        for date in requested_dates
-                    ):
-
-                        invalid_dates = [
-                            date
-                            for date in requested_dates
-                            if date not in searched_dates
-                        ]
-
-                        result = {
-                            "error": "InvalidAcquisitionDate",
-                            "message": (
-                                "The analysis attempted to use dates "
-                                "that were not returned by the "
-                                "Sentinel-2 search: "
-                                f"{invalid_dates}. "
-                                "Use only actual searched acquisition "
-                                "dates."
-                            ),
-                        }
-
-                    else:
-
-                        try:
-                            result = fn(**args)
-
-                        except Exception as exc:
-                            result = {
-                                "error":
-                                    type(exc).__name__,
-                                "message":
-                                    str(exc),
-                            }
-
-                elif fn is None:
-
+                if fn is None:
                     result = {
                         "error":
                             f"Unknown tool: {name}"
                     }
 
                 else:
-
                     try:
                         result = fn(**args)
 
@@ -275,9 +345,9 @@ class EOAgent:
                                 str(exc),
                         }
 
-                # =================================================
-                # Process successful search results
-                # =================================================
+                # ---------------------------------------------
+                # Store successful search
+                # ---------------------------------------------
 
                 if (
                     name == "search_sentinel2"
@@ -285,20 +355,28 @@ class EOAgent:
                     and "error" not in result
                 ):
 
-                    searched_dates = {
-                        item.get("date")
-                        for item in result.get(
-                            "items",
-                            [],
-                        )
-                        if item.get("date")
+                    last_search_result = result
+                    last_search_args = args
+
+                    result_summary = {
+                        "count":
+                            result.get("count"),
+
+                        "dates": [
+                            item.get("date")
+                            for item
+                            in result.get(
+                                "items",
+                                [],
+                            )
+                        ],
                     }
 
-                # =================================================
-                # Process successful analysis
-                # =================================================
+                # ---------------------------------------------
+                # Store successful analysis
+                # ---------------------------------------------
 
-                if (
+                elif (
                     name == "analyze_temporal_aoi"
                     and isinstance(result, dict)
                     and "error" not in result
@@ -318,36 +396,6 @@ class EOAgent:
                         artifacts.update(
                             tool_artifacts
                         )
-
-                # =================================================
-                # Build useful trace
-                # =================================================
-
-                if (
-                    name == "search_sentinel2"
-                    and isinstance(result, dict)
-                    and "error" not in result
-                ):
-
-                    result_summary = {
-                        "count":
-                            result.get("count"),
-
-                        "dates": [
-                            item.get("date")
-                            for item
-                            in result.get(
-                                "items",
-                                [],
-                            )
-                        ],
-                    }
-
-                elif (
-                    name == "analyze_temporal_aoi"
-                    and isinstance(result, dict)
-                    and "error" not in result
-                ):
 
                     result_summary = {
                         "dates":
@@ -380,24 +428,16 @@ class EOAgent:
                                 "start_end_cosine_distance"
                             ),
 
-                        "artifacts": {
-                            "prithvi_change_geotiff":
-                                artifacts.get(
-                                    "prithvi_change_geotiff"
-                                ),
-
-                            "ndvi_change_geotiff":
-                                artifacts.get(
-                                    "ndvi_change_geotiff"
-                                ),
-                        },
+                        "prithvi_change_geotiff":
+                            artifacts.get(
+                                "prithvi_change_geotiff"
+                            ),
                     }
 
                 elif (
                     isinstance(result, dict)
                     and "error" in result
                 ):
-
                     result_summary = result
 
                 else:
@@ -413,10 +453,6 @@ class EOAgent:
                     }
                 )
 
-                # =================================================
-                # Return deterministic tool evidence to Qwen
-                # =================================================
-
                 messages.append(
                     {
                         "role": "tool",
@@ -427,10 +463,6 @@ class EOAgent:
                         ),
                     }
                 )
-
-        # =====================================================
-        # Maximum number of calls reached
-        # =====================================================
 
         return {
             "answer": (
