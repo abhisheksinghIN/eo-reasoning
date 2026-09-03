@@ -151,3 +151,55 @@ class PrithviModel:
         temporal = self.temporal_embeddings(pixel_values)
 
         return temporal.mean(dim=1)
+
+def spatial_temporal_embeddings_from_hidden(
+    self,
+    hidden: torch.Tensor,
+) -> torch.Tensor:
+    """
+    Reshape Prithvi tokens into the spatial-temporal grid.
+
+    Input:
+        [B, 589, 768]
+
+    Output:
+        [B, 3, 14, 14, 768]
+    """
+
+    if hidden.ndim != 3:
+        raise ValueError(
+            f"Expected [B,L,D], got {tuple(hidden.shape)}."
+        )
+
+    grid = (
+        self.config.image_size
+        // self.config.spatial_patch_size
+    )
+
+    expected_tokens = (
+        self.config.num_frames
+        * grid
+        * grid
+    )
+
+    if hidden.shape[1] == expected_tokens + 1:
+        # Remove CLS token.
+        tokens = hidden[:, 1:, :]
+    elif hidden.shape[1] == expected_tokens:
+        tokens = hidden
+    else:
+        raise ValueError(
+            f"Expected {expected_tokens} or "
+            f"{expected_tokens + 1} tokens, "
+            f"got {hidden.shape[1]}."
+        )
+
+    batch, _, dim = tokens.shape
+
+    return tokens.reshape(
+        batch,
+        self.config.num_frames,
+        grid,
+        grid,
+        dim,
+    )

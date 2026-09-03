@@ -10,6 +10,12 @@ from tools.evidence_tools import build_evidence_object
 from tools.geofm_tools import run_prithvi_temporal
 from tools.physics_tools import check_vegetation_consistency
 
+from pathlib import Path
+import numpy as np
+from analysis.change_map import (write_ndvi_change_geotiff,)
+from analysis.prithvi_change import (write_prithvi_change_geotiff,)
+
+
 
 def analyze_temporal_aoi(
     bbox: list,
@@ -29,6 +35,42 @@ def analyze_temporal_aoi(
     )
     spectral = analyze_spectral_timeseries(paths=paths, dates=dates)
     geofm = run_prithvi_temporal(paths=paths)
+# --------------
+    output_dir = Path(".cache/outputs")
+    output_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    
+    ndvi_change_path = write_ndvi_change_geotiff(
+        start_path=paths[0],
+        end_path=paths[-1],
+        output_path=(
+            output_dir
+            / f"delta_ndvi_{dates[0]}_{dates[-1]}.tif"
+        ),
+    )
+    
+    spatial_change = np.asarray(
+        geofm.pop("_spatial_change_map"),
+        dtype=np.float32,
+    )
+    
+    prithvi_change_path = (
+        write_prithvi_change_geotiff(
+            change=spatial_change,
+            start_path=paths[0],
+            end_path=paths[-1],
+            output_path=(
+                output_dir
+                / (
+                    f"prithvi_change_"
+                    f"{dates[0]}_{dates[-1]}.tif"
+                )
+            ),
+        )
+    )
+# --------------                
     physical = check_vegetation_consistency(
         ndvi_change=spectral["ndvi"]["absolute_change"],
         ndmi_change=spectral["ndmi"]["absolute_change"],
@@ -42,5 +84,6 @@ def analyze_temporal_aoi(
         geofm=geofm,
         physical_consistency=physical,
     )
-    result["artifacts"] = {"sentinel2_paths": paths}
+#    result["artifacts"] = {"sentinel2_paths": paths}
+    result["artifacts"] = {"sentinel2_paths": paths, "ndvi_change_geotiff": ndvi_change_path, "prithvi_change_geotiff": prithvi_change_path,}
     return result
