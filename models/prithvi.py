@@ -120,86 +120,152 @@ class PrithviModel:
 
         return hidden
 
-    @torch.inference_mode()
-    def temporal_embeddings(
-        self,
-        pixel_values: torch.Tensor,
-    ) -> torch.Tensor:
-        """
-        Convert Prithvi tokens to one embedding per temporal frame.
-
-        Returns:
-            [B, T, D]
-        """
-
-        hidden = self.encode(pixel_values)
-
-        return self.temporal_pooler.pool(hidden)
 
     @torch.inference_mode()
-    def global_embedding(
+    def spatial_temporal_embeddings_from_hidden(
         self,
-        pixel_values: torch.Tensor,
+        hidden: torch.Tensor,
     ) -> torch.Tensor:
         """
-        Return one global embedding for the temporal sequence.
-
-        Returns:
-            [B, D]
+        Reshape Prithvi hidden tokens into a spatial-temporal grid.
+    
+        Input:
+            hidden: [B, L, D]
+    
+        For Prithvi v1 with:
+            T = 3
+            image size = 224
+            patch size = 16
+    
+        Output:
+            [B, 3, 14, 14, 768]
         """
-
-        temporal = self.temporal_embeddings(pixel_values)
-
-        return temporal.mean(dim=1)
-
-def spatial_temporal_embeddings_from_hidden(
-    self,
-    hidden: torch.Tensor,
-) -> torch.Tensor:
-    """
-    Reshape Prithvi tokens into the spatial-temporal grid.
-
-    Input:
-        [B, 589, 768]
-
-    Output:
-        [B, 3, 14, 14, 768]
-    """
-
-    if hidden.ndim != 3:
-        raise ValueError(
-            f"Expected [B,L,D], got {tuple(hidden.shape)}."
+    
+        if hidden.ndim != 3:
+            raise ValueError(
+                f"Expected hidden tensor [B,L,D], "
+                f"got {tuple(hidden.shape)}."
+            )
+    
+        grid = (
+            self.config.image_size
+            // self.config.spatial_patch_size
         )
-
-    grid = (
-        self.config.image_size
-        // self.config.spatial_patch_size
-    )
-
-    expected_tokens = (
-        self.config.num_frames
-        * grid
-        * grid
-    )
-
-    if hidden.shape[1] == expected_tokens + 1:
-        # Remove CLS token.
-        tokens = hidden[:, 1:, :]
-    elif hidden.shape[1] == expected_tokens:
-        tokens = hidden
-    else:
-        raise ValueError(
-            f"Expected {expected_tokens} or "
-            f"{expected_tokens + 1} tokens, "
-            f"got {hidden.shape[1]}."
+    
+        expected_patch_tokens = (
+            self.config.num_frames
+            * grid
+            * grid
         )
+    
+        # Prithvi output normally includes one CLS token.
+        if hidden.shape[1] == expected_patch_tokens + 1:
+            tokens = hidden[:, 1:, :]
+    
+        elif hidden.shape[1] == expected_patch_tokens:
+            tokens = hidden
+    
+        else:
+            raise ValueError(
+                f"Unexpected Prithvi token count: "
+                f"{hidden.shape[1]}. "
+                f"Expected {expected_patch_tokens} "
+                f"or {expected_patch_tokens + 1}."
+            )
+    
+        batch_size, _, embedding_dim = tokens.shape
+    
+        spatial = tokens.reshape(
+            batch_size,
+            self.config.num_frames,
+            grid,
+            grid,
+            embedding_dim,
+        )
+    
+        return spatial
+    
+    
+        @torch.inference_mode()
+        def temporal_embeddings(
+            self,
+            pixel_values: torch.Tensor,
+        ) -> torch.Tensor:
+            """
+            Convert Prithvi tokens to one embedding per temporal frame.
+    
+            Returns:
+                [B, T, D]
+            """
+    
+            hidden = self.encode(pixel_values)
+    
+            return self.temporal_pooler.pool(hidden)
+    
+        @torch.inference_mode()
+        def global_embedding(
+            self,
+            pixel_values: torch.Tensor,
+        ) -> torch.Tensor:
+            """
+            Return one global embedding for the temporal sequence.
+    
+            Returns:
+                [B, D]
+            """
+    
+            temporal = self.temporal_embeddings(pixel_values)
+    
+            return temporal.mean(dim=1)
 
-    batch, _, dim = tokens.shape
-
-    return tokens.reshape(
-        batch,
-        self.config.num_frames,
-        grid,
-        grid,
-        dim,
-    )
+#def spatial_temporal_embeddings_from_hidden(
+#    self,
+#    hidden: torch.Tensor,
+#) -> torch.Tensor:
+#    """
+#    Reshape Prithvi tokens into the spatial-temporal grid.
+#
+#    Input:
+#        [B, 589, 768]
+#
+#    Output:
+#        [B, 3, 14, 14, 768]
+#    """
+#
+#    if hidden.ndim != 3:
+#        raise ValueError(
+#            f"Expected [B,L,D], got {tuple(hidden.shape)}."
+#        )
+#
+#    grid = (
+#        self.config.image_size
+#        // self.config.spatial_patch_size
+#    )
+#
+#    expected_tokens = (
+#        self.config.num_frames
+#        * grid
+#        * grid
+#    )
+#
+#    if hidden.shape[1] == expected_tokens + 1:
+#        # Remove CLS token.
+#        tokens = hidden[:, 1:, :]
+#    elif hidden.shape[1] == expected_tokens:
+#        tokens = hidden
+#    else:
+#        raise ValueError(
+#            f"Expected {expected_tokens} or "
+#            f"{expected_tokens + 1} tokens, "
+#            f"got {hidden.shape[1]}."
+#        )
+#
+#    batch, _, dim = tokens.shape
+#
+#    return tokens.reshape(
+#        batch,
+#        self.config.num_frames,
+#        grid,
+#        grid,
+#        dim,
+#    )
