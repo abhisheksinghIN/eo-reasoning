@@ -7,6 +7,9 @@ from typing import List
 from data.preprocessing import prepare_prithvi_tensor
 from models.embeddings import summarize_temporal_embeddings
 #from models.prithvi import DEFAULT_MODEL_ID, PrithviConfig, PrithviModel
+from analysis.prithvi_change import cosine_change_map
+
+
 from models.prithvi import (
     DEFAULT_MODEL_NAME,
     PrithviConfig,
@@ -32,13 +35,35 @@ def run_prithvi_temporal(
 
     model = _get_model(model_name)
 
-    temporal = model.temporal_embeddings(tensor)
+    #temporal = model.temporal_embeddings(tensor)
+    # ---------------
+    hidden = model.encode(tensor)
+    
+    temporal = model.temporal_pooler.pool(hidden)
+    
+    spatial = (
+        model.spatial_temporal_embeddings_from_hidden(
+            hidden
+        )
+    )
+    
+    spatial_change = cosine_change_map(spatial)    
+    # ---------------
 
     z = temporal[0].detach().cpu().numpy()
 
+#    return {
+#        "model": model_name,
+#        "input_shape": list(tensor.shape),
+#        "temporal_embeddings": z.tolist(),
+#        "summary": summarize_temporal_embeddings(z),
+#    }
     return {
         "model": model_name,
         "input_shape": list(tensor.shape),
         "temporal_embeddings": z.tolist(),
         "summary": summarize_temporal_embeddings(z),
+    
+        # Private intermediate used by pipeline.py
+        "_spatial_change_map": spatial_change.tolist(),
     }
