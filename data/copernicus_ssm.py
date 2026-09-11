@@ -39,8 +39,7 @@ function setup() {
 }
 
 function evaluatePixel(s) {
-    // CLMS SSM source format is UINT8 with scaling = 1/2.
-    // Convert DN to physical percent saturation here.
+    // CLMS SSM source format uses a scale factor of 0.5.
     return [
         s.SSM * 0.5,
         s.SSM_NOISE * 0.5,
