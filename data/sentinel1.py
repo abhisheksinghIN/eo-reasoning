@@ -268,27 +268,3 @@ def download_sentinel1_patch(
 
     return str(out_path)
     
-import time
-
-print(
-    f"Requesting Sentinel-1 {date} "
-    f"orbit={orbit_state}..."
-)
-
-t0 = time.time()
-
-response = requests.post(
-    PROCESS_URL,
-    headers={
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "Accept": "image/tiff",
-    },
-    json=request_json,
-    timeout=180,
-)
-
-print(
-    f"Sentinel-1 processing/download: "
-    f"{time.time() - t0:.1f} s"
-)

@@ -8,6 +8,8 @@ import requests
 
 from data.cdse_auth import get_access_token
 
+from rasterio.warp import transform_bounds
+
 
 PROCESS_URL = "https://sh.dataspace.copernicus.eu/process/v1"
 
@@ -37,14 +39,15 @@ function setup() {
 }
 
 function evaluatePixel(s) {
+    // CLMS SSM source format is UINT8 with scaling = 1/2.
+    // Convert DN to physical percent saturation here.
     return [
-        s.SSM,
-        s.SSM_NOISE,
+        s.SSM * 0.5,
+        s.SSM_NOISE * 0.5,
         s.dataMask
     ];
 }
 """
-
 
 def download_ssm_patch(
     bbox: list,
@@ -54,6 +57,21 @@ def download_ssm_patch(
     resolution: int = 1000,
 ) -> str:
 
+    if len(bbox) != 4:
+        raise ValueError(
+            "bbox must be [min_lon, min_lat, max_lon, max_lat]."
+        )
+
+    # Input bbox is WGS84 lon/lat.
+    # CLMS output is requested in a metric projected CRS so that
+    # resx/resy=1000 really means 1 km.
+    projected_bbox = transform_bounds(
+        "EPSG:4326",
+        f"EPSG:{crs_epsg}",
+        *[float(x) for x in bbox],
+        densify_pts=21,
+    )
+
     token = get_access_token()
 
     output_path = Path(output_path)
@@ -61,11 +79,26 @@ def download_ssm_patch(
         parents=True,
         exist_ok=True,
     )
-
+#def download_ssm_patch(
+#    bbox: list,
+#    date: str,
+#    output_path: str | Path,
+#    crs_epsg: int = 32632,
+#    resolution: int = 1000,
+#) -> str:
+#
+#    token = get_access_token()
+#
+#    output_path = Path(output_path)
+#    output_path.parent.mkdir(
+#        parents=True,
+#        exist_ok=True,
+#    )
+#################################
     request_json = {
         "input": {
             "bounds": {
-                "bbox": bbox,
+                "bbox": list(projected_bbox),
                 "properties": {
                     "crs": (
                         "http://www.opengis.net/"
