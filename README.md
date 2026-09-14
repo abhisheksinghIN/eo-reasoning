@@ -2,35 +2,33 @@
 
 **Evidence-grounded temporal Earth Observation reasoning with Geo-Foundation Models and an agentic LLM**
 
-> **Current MVP:** Sentinel-2 L2A → Prithvi-EO v1 → spectral indices + latent representation change → structured evidence → Qwen3 tool orchestration and interpretation.
+> **Current MVP:** Data Access→ Prithvi-EO v1 + TerraMind-v1 → latent representation → structured evidence → Qwen3 tool orchestration and interpretation.
 
 > **How can Geo-Foundation Models enable deeper, evidence-grounded reasoning for Earth Observation?**
 
 Most EO foundation-model demonstrations focus on downstream prediction or feature extraction. GeoReason-EO explores a different direction: using a GeoFM representation as one component in a transparent reasoning system that combines:
 
 1. real EO observations;
-2. deterministic spectral indicators;
-3. learned GeoFM representations;
-4. consistency checks;
-5. provenance and limitations;
-6. an LLM that orchestrates tools and explains evidence.
+2. learned GeoFM representations;
+3. an LLM that orchestrates tools and explains evidence.
 ---
 
 ## 1. Project status
 
-GeoReason-EO is a working research demonstrator for testing whether a pretrained geospatial foundation model can support **evidence-grounded temporal reasoning in Earth Observation (EO)**.
+**Use Case 1 – GeoReason-EO:**
+A research demonstrator designed to evaluate whether a pretrained geospatial foundation model can support **evidence-grounded temporal reasoning for Earth Observation (EO)** applications.
+
+**Use Case 2 – Soil Moisture Retrieval:**
+A soil-moisture retrieval framework based on the **TerraMind geospatial foundation model (GeoFM)**, with a focus on **Sentinel-1 GRD data**, **physics-informed constraints**, and **JEPA-based learning**, integrated with the **Copernicus Data Space Ecosystem (CDSE)** through the **STAC API**.
+
 
 The current implementation has successfully demonstrated:
 
-- Sentinel-2 data access through the **Copernicus Data Space Ecosystem (CDSE)**;
-- Sentinel-2 L2A patch retrieval through the Sentinel Hub Process API;
-- GPU inference with the TerraTorch Prithvi backbone (**Prithvi-EO v1**);
-- temporal GeoFM embeddings with shape `[1, 3, 768]`;
-- NDVI, NDMI, and EVI temporal statistics;
-- latent-space cosine and L2 change metrics;
+- Data access through the **Copernicus Data Space Ecosystem (CDSE)**;
+- Sentinel-1/2 patch retrieval through the Sentinel Hub Process API;
+- GPU inference with the TerraTorch Prithvi backbone (**Prithvi-EO v1**, *TerraMind-v1*);
 - structured evidence generation;
-- Qwen3 tool calling through Ollama;
-- evidence-grounded natural-language interpretation.
+- Qwen3 tool calling through Ollama and evidence-grounded natural-language interpretation.
 
 ---
 
@@ -45,7 +43,7 @@ Purpose:
 - search CDSE/STAC;
 - inspect actual Sentinel-2 acquisitions;
 - inspect acquisition dates;
-- inspect cloud-cover metadata;
+- inspect metadata;
 - inspect available assets.
 
 Typical AOI:
@@ -53,42 +51,38 @@ Typical AOI:
 ```text
 [11.25, 46.40, 11.40, 46.55]
 ```
+<!--
 <img width="1023" height="539" alt="image" src="https://github.com/user-attachments/assets/39e52045-0d78-4469-a915-34f7b4ebed29" />
+-->
 
 ## 2.2 Deterministic analysis
 
 Purpose:
 
-- accept exactly three acquisition dates;
-- retrieve Sentinel-2 data;
-- preprocess inputs;
-- run Prithvi;
-- calculate spectral indices;
-- calculate embedding change;
+- retrieve Sentinel-1/2 and reference data and preprocess inputs;
+- run GeoFM and calculate embedding change;
 - construct structured evidence.
 
-The current Prithvi v1 MVP requires exactly three temporal frames.
-
+<!--
 <img width="755" height="399" alt="image" src="https://github.com/user-attachments/assets/21e15339-03ed-407e-839b-26c0a514b8aa" />
-
+-->
 
 ## 2.3 Agent
-Prompt: "Investigate vegetation temporal change for bbox [11.25, 46.40, 11.40, 46.55] between 2026-06-01 and 2026-07-31."
+e.g. (Use-case 1) Prompt: "Investigate vegetation temporal change for bbox [11.25, 46.40, 11.40, 46.55] between 2026-06-01 and 2026-07-31."
 
 Purpose:
 
 - accept a natural-language EO request;
 - let Qwen3 select high-level tools;
 - execute deterministic EO analysis;
-- present a tool trace;
 - generate an evidence-grounded interpretation.
 
 <img width="1040" height="497" alt="image" src="https://github.com/user-attachments/assets/d4ad3e66-a6cc-43ba-baea-a6d9adbd4508" />
 
-
 ---
 
 # 3. System architecture
+## 3.1 Use-Case 1
 
 ```text
                          ┌──────────────────────┐
@@ -149,9 +143,9 @@ The key design principle is:
 > **Measurements come from deterministic EO tools. Qwen3 orchestrates tools and interprets returned evidence; it must not invent EO measurements.**
 
 ---
-# 4. Repository structure
+## 3.2 Repository structure 
 
-The important logical structure is:
+The important logical structure is (Use-case 1):
 
 ```text
 eo-reasoning/
