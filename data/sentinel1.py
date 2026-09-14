@@ -9,7 +9,7 @@ import requests
 
 from data.cdse_auth import get_access_token
 from data.stac_client import CDSESTACClient
-
+from datetime import datetime, timedelta, timezone
 
 def search_sentinel1(
     bbox: list,
@@ -45,6 +45,10 @@ def search_sentinel1(
                     if item.datetime
                     else None
                 ),
+                "platform": (
+                    item.properties.get("platform")
+                    or item.id[:3]
+                ),                
                 "instrument_mode": props.get(
                     "sar:instrument_mode"
                 ),
@@ -57,7 +61,7 @@ def search_sentinel1(
                 "polarization": (
                     props.get("sar:polarizations")
                     or props.get("s1:polarization")
-                ),
+                ),                                
             }
         )
 
@@ -111,6 +115,85 @@ function evaluatePixel(s) {
 }
 """
 
+def _process_time_range(
+    date: str,
+    acquisition_datetime: str | None = None,
+) -> dict[str, str]:
+    """
+    Build the Sentinel Hub Process API time range.
+
+    When the exact STAC acquisition datetime is available,
+    use a narrow window around that acquisition instead of
+    requesting the whole calendar day.
+    """
+
+    if acquisition_datetime is None:
+        return {
+            "from": f"{date}T00:00:00Z",
+            "to": f"{date}T23:59:59Z",
+        }
+
+    value = acquisition_datetime.replace(
+        "Z",
+        "+00:00",
+    )
+
+    dt = datetime.fromisoformat(value)
+
+    if dt.tzinfo is None:
+        dt = dt.replace(
+            tzinfo=timezone.utc
+        )
+
+    dt = dt.astimezone(
+        timezone.utc
+    )
+
+    # Sentinel-1 scene itself is only tens of seconds long.
+    # A +/- 5 minute window safely contains the selected pass
+    # while avoiding unrelated passes from the same day.
+    start = dt - timedelta(minutes=5)
+    end = dt + timedelta(minutes=5)
+
+    def as_z(x: datetime) -> str:
+        return (
+            x.isoformat(
+                timespec="seconds"
+            )
+            .replace(
+                "+00:00",
+                "Z",
+            )
+        )
+
+    return {
+        "from": as_z(start),
+        "to": as_z(end),
+    }
+
+#def _cache_name(
+#    bbox,
+#    date: str,
+#    width: int,
+#    height: int,
+#    orbit_state: str | None,
+#) -> str:
+#    band_signature = ",".join(S1_OUTPUT_BANDS)
+#
+#    key = (
+#        f"{list(bbox)}|"
+#        f"{date}|"
+#        f"{width}|"
+#        f"{height}|"
+#        f"{orbit_state}|"
+#        f"{band_signature}|"
+#        f"SIGMA0_ELLIPSOID|"
+#        f"v1"
+#    ).encode("utf-8")
+#
+#    digest = hashlib.sha1(key).hexdigest()[:12]
+#
+#    return f"s1_{date}_{digest}.tif"
 
 def _cache_name(
     bbox,
@@ -118,25 +201,41 @@ def _cache_name(
     width: int,
     height: int,
     orbit_state: str | None,
+    acquisition_datetime: str | None = None,
 ) -> str:
-    band_signature = ",".join(S1_OUTPUT_BANDS)
+    band_signature = ",".join(
+        S1_OUTPUT_BANDS
+    )
 
     key = (
         f"{list(bbox)}|"
         f"{date}|"
+        f"{acquisition_datetime}|"
         f"{width}|"
         f"{height}|"
         f"{orbit_state}|"
         f"{band_signature}|"
         f"SIGMA0_ELLIPSOID|"
-        f"v1"
+        f"v2"
     ).encode("utf-8")
 
-    digest = hashlib.sha1(key).hexdigest()[:12]
+    digest = hashlib.sha1(
+        key
+    ).hexdigest()[:12]
 
-    return f"s1_{date}_{digest}.tif"
+    return (
+        f"s1_{date}_{digest}.tif"
+    )
 
-
+#def download_sentinel1_patch(
+#    bbox: list,
+#    date: str,
+#    output_dir: str | Path = ".cache/soil_moisture/sentinel1",
+#    width: int = 256,
+#    height: int = 256,
+#    orbit_state: str | None = None,
+#    force: bool = False,
+#) -> str:
 def download_sentinel1_patch(
     bbox: list,
     date: str,
@@ -144,6 +243,7 @@ def download_sentinel1_patch(
     width: int = 256,
     height: int = 256,
     orbit_state: str | None = None,
+    acquisition_datetime: str | None = None,
     force: bool = False,
 ) -> str:
     """
@@ -167,13 +267,22 @@ def download_sentinel1_patch(
         exist_ok=True,
     )
 
+#    out_path = out_dir / _cache_name(
+#        bbox=bbox,
+#        date=date,
+#        width=width,
+#        height=height,
+#        orbit_state=orbit_state,
+#    )
     out_path = out_dir / _cache_name(
         bbox=bbox,
         date=date,
         width=width,
         height=height,
         orbit_state=orbit_state,
+        acquisition_datetime=acquisition_datetime,
     )
+
 
     if out_path.exists() and not force:
         return str(out_path)
@@ -181,10 +290,14 @@ def download_sentinel1_patch(
     token = get_access_token()
 
     data_filter = {
-        "timeRange": {
-            "from": f"{date}T00:00:00Z",
-            "to": f"{date}T23:59:59Z",
-        },
+#        "timeRange": {
+#            "from": f"{date}T00:00:00Z",
+#            "to": f"{date}T23:59:59Z",
+#        },
+        "timeRange": _process_time_range(
+            date=date,
+            acquisition_datetime=acquisition_datetime,
+        ),
         "acquisitionMode": "IW",
         "polarization": "DV",
         "mosaickingOrder": "mostRecent",

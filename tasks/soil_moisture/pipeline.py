@@ -127,12 +127,18 @@ def run_soil_moisture_collocation(
 #        bbox=bbox,
 #        date=date,
 #        output_dir=output_dir / "sentinel1",
+#        orbit_state=scene.get("orbit_state"),
 #    )
     s1_path = download_sentinel1_patch(
         bbox=bbox,
         date=date,
         output_dir=output_dir / "sentinel1",
-        orbit_state=scene.get("orbit_state"),
+        orbit_state=scene.get(
+            "orbit_state"
+        ),
+        acquisition_datetime=scene.get(
+            "datetime"
+        ),
     )
     ssm_path = download_ssm_patch(
         bbox=bbox,
