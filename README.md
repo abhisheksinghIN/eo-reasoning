@@ -42,7 +42,8 @@ total        8.080045700073242 finite= True
 
 retrieval-  6.944911956787109 finite= True | predictive - 1.8979721069335938 finite= True | jepa - 0.9307221174240112 finite= True | physics - 0.00014201791782397777 finite= True
 
-<img width="407" height="665" alt="image" src="https://github.com/user-attachments/assets/0dde8e6a-5afb-4f92-bc34-a2c4c7b39287" />
+<img width="284" height="444" alt="image" src="https://github.com/user-attachments/assets/580b442c-0041-4b30-916f-30afcccb6b87" />
+
 
 
 The current implementation has successfully demonstrated:
