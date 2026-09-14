@@ -15,11 +15,32 @@ Most EO foundation-model demonstrations focus on downstream prediction or featur
 
 ## 1. Project status
 
-**Use Case 1 – GeoReason-EO:**
+**Use Case 1 – Change Detection:**
 A research demonstrator designed to evaluate whether a pretrained geospatial foundation model can support **evidence-grounded temporal reasoning for Earth Observation (EO)** applications.
+
+<img width="755" height="399" alt="image" src="https://github.com/user-attachments/assets/50b23471-fc55-48a9-b334-520781b7b450" />
 
 **Use Case 2 – Soil Moisture Retrieval:**
 A soil-moisture retrieval framework based on the **TerraMind geospatial foundation model (GeoFM)**, with a focus on **Sentinel-1 GRD data**, **physics-informed constraints**, and **JEPA-based learning**, integrated with the **Copernicus Data Space Ecosystem (CDSE)** through the **STAC API**.
+
+<img width="432" height="119" alt="image" src="https://github.com/user-attachments/assets/8c00d31c-9b94-4ad0-be8f-8a9157236265" />
+
+Input tensor: torch.Size([1, 3, 2, 224, 224]) | Backbone: terramind_v1_base | Modality: S1GRD | Device: cuda | Target date: 2026-07-17
+
+**Metrics (Use-Case 2)**
+
+Reference SSM: 60.5 | Reference noise: 7.5 | Observed VV median: 0.1092568039894104 | Incidence angle: 39.5174446105957
+
+**Pre-Trained model (Terramind) outputs:**
+
+Retrieval SSM: 53.05508804321289 | Predictive SSM: 58.102027893066406 | Predicted VV: 0.12611016631126404
+
+
+**Losses:**
+
+total        8.080045700073242 finite= True
+
+retrieval-  6.944911956787109 finite= True | predictive - 1.8979721069335938 finite= True | jepa - 0.9307221174240112 finite= True | physics - 0.00014201791782397777 finite= True
 
 
 The current implementation has successfully demonstrated:
@@ -76,8 +97,9 @@ Purpose:
 - let Qwen3 select high-level tools;
 - execute deterministic EO analysis;
 - generate an evidence-grounded interpretation.
-
+<!--
 <img width="1040" height="497" alt="image" src="https://github.com/user-attachments/assets/d4ad3e66-a6cc-43ba-baea-a6d9adbd4508" />
+-->
 
 ---
 
