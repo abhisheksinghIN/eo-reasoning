@@ -1,5 +1,5 @@
 project:
-  name: "GeoReason-EO"
+  name: "EO-Reasoning"
   version: "0.1.0"
   description: >
     Temporal Earth Observation reasoning using
