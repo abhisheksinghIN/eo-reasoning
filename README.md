@@ -160,7 +160,42 @@ Purpose:
                                    EvidenceObject
                                            │
                                            ▼
-                              Qwen3 interpretation
+
+                             Qwen3 interpretation
+```
+## 3.1 Use-Case 2
+
+```text
+                    
+User prompt ─ Agent ┤ Mistral
+                         │
+                         ▼
+              deterministic EO tools
+                         │
+                 Sentinel-1 search
+                         │
+             geometry/orbit selection
+                         │
+                     TerraMind
+                         │
+                  ┌──────┴──────┐
+                  │             │
+                 JEPA        retrieval
+                  │             │
+             predictive SSM     SSM
+                  │             │
+                  └─────┬───────┘
+                        │
+                     physics
+                        │
+                        ▼
+               SoilMoistureEvidence
+                        │
+                        ▼
+                     Mistral
+                        │
+               grounded explanation
+
 ```
 
 The key design principle is:
