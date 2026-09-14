@@ -18,17 +18,21 @@ Most EO foundation-model demonstrations focus on downstream prediction or featur
 **Use Case 1 – Change Detection:**
 A research demonstrator designed to evaluate whether a pretrained geospatial foundation model can support **evidence-grounded temporal reasoning for Earth Observation (EO)** applications.
 
+
 <img width="755" height="399" alt="image" src="https://github.com/user-attachments/assets/50b23471-fc55-48a9-b334-520781b7b450" />
+
 
 **Use Case 2 – Soil Moisture Retrieval:**
 A soil-moisture retrieval framework based on the **TerraMind geospatial foundation model (GeoFM)**, with a focus on **Sentinel-1 GRD data**, **physics-informed constraints**, and **JEPA-based learning**, integrated with the **Copernicus Data Space Ecosystem (CDSE)** through the **STAC API**.
 
+
 <img width="491" height="554" alt="image" src="https://github.com/user-attachments/assets/68d68fd3-4e8b-406a-868b-6f66d6e7959f" />
 
-<img width="504" height="484" alt="image" src="https://github.com/user-attachments/assets/4e7dc582-3f42-407f-83a5-c7a357ca732b" />
 
 <img width="501" height="443" alt="image" src="https://github.com/user-attachments/assets/c1dd3a1e-424a-452b-a6c9-051783a85978" />
 
+
+<img width="504" height="484" alt="image" src="https://github.com/user-attachments/assets/4e7dc582-3f42-407f-83a5-c7a357ca732b" />
 
 The current implementation has successfully demonstrated:
 
