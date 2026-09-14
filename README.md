@@ -2,7 +2,7 @@
 
 **Evidence-grounded temporal Earth Observation reasoning with Geo-Foundation Models and an agentic LLM**
 
-> **Current MVP:** Data Access→ Prithvi-EO v1 + TerraMind-v1 → latent representation → structured evidence → Qwen3 tool orchestration and interpretation.
+> **Current MVP:** Data Access→ Prithvi-EO v1 + TerraMind-v1 → latent representation → structured evidence → ministral-3:8b tool orchestration and interpretation.
 
 > **How can Geo-Foundation Models enable deeper, evidence-grounded reasoning for Earth Observation?**
 
@@ -23,27 +23,11 @@ A research demonstrator designed to evaluate whether a pretrained geospatial fou
 **Use Case 2 – Soil Moisture Retrieval:**
 A soil-moisture retrieval framework based on the **TerraMind geospatial foundation model (GeoFM)**, with a focus on **Sentinel-1 GRD data**, **physics-informed constraints**, and **JEPA-based learning**, integrated with the **Copernicus Data Space Ecosystem (CDSE)** through the **STAC API**.
 
-<img width="432" height="119" alt="image" src="https://github.com/user-attachments/assets/8c00d31c-9b94-4ad0-be8f-8a9157236265" />
+<img width="491" height="554" alt="image" src="https://github.com/user-attachments/assets/68d68fd3-4e8b-406a-868b-6f66d6e7959f" />
 
-Input tensor: torch.Size([1, 3, 2, 224, 224]) | Backbone: terramind_v1_base | Modality: S1GRD | Device: cuda | Target date: 2026-07-17
+<img width="504" height="484" alt="image" src="https://github.com/user-attachments/assets/4e7dc582-3f42-407f-83a5-c7a357ca732b" />
 
-**Metrics (Use-Case 2)**
-
-Reference SSM: 60.5 | Reference noise: 7.5 | Observed VV median: 0.1092568039894104 | Incidence angle: 39.5174446105957
-
-**Pre-Trained model (Terramind) outputs:**
-
-Retrieval SSM: 53.05508804321289 | Predictive SSM: 58.102027893066406 | Predicted VV: 0.12611016631126404
-
-
-**Losses:**
-
-total        8.080045700073242 finite= True
-
-retrieval-  6.944911956787109 finite= True | predictive - 1.8979721069335938 finite= True | jepa - 0.9307221174240112 finite= True | physics - 0.00014201791782397777 finite= True
-
-<img width="284" height="444" alt="image" src="https://github.com/user-attachments/assets/580b442c-0041-4b30-916f-30afcccb6b87" />
-
+<img width="501" height="443" alt="image" src="https://github.com/user-attachments/assets/c1dd3a1e-424a-452b-a6c9-051783a85978" />
 
 
 The current implementation has successfully demonstrated:
@@ -52,7 +36,7 @@ The current implementation has successfully demonstrated:
 - Sentinel-1/2 patch retrieval through the Sentinel Hub Process API;
 - GPU inference with the TerraTorch Prithvi backbone (**Prithvi-EO v1**, *TerraMind-v1*);
 - structured evidence generation;
-- Qwen3 tool calling through Ollama and evidence-grounded natural-language interpretation.
+- ministral-3:8b tool calling through Ollama and evidence-grounded natural-language interpretation.
 
 ---
 
@@ -79,7 +63,7 @@ Typical AOI:
 <img width="1023" height="539" alt="image" src="https://github.com/user-attachments/assets/39e52045-0d78-4469-a915-34f7b4ebed29" />
 -->
 
-## 2.2 Deterministic analysis
+## 2.2 GeoFM Analysis (Vegetation and Soil Moisture)
 
 Purpose:
 
@@ -91,13 +75,15 @@ Purpose:
 <img width="755" height="399" alt="image" src="https://github.com/user-attachments/assets/21e15339-03ed-407e-839b-26c0a514b8aa" />
 -->
 
-## 2.3 Agent
+## 2.3 Mistral Agent
 e.g. (Use-case 1) Prompt: "Investigate vegetation temporal change for bbox [11.25, 46.40, 11.40, 46.55] between 2026-06-01 and 2026-07-31."
+
+e.g. (Use-case 2) Prompt: "Analyze surface soil moisture for bbox [10.00, 45.05, 10.20, 45.20] in the Po Valley from 2026-07-01 to 2026-08-31. Use descending Sentinel-1 relative orbit 168. Explain the selected Sentinel-1 observations, the TerraMind GeoFM retrieval, the temporal JEPA prediction, SAR physics consistency, and the CLMS Surface Soil Moisture reference. Clearly distinguish observations from model outputs and reference data, and state all scientific limitations."
 
 Purpose:
 
 - accept a natural-language EO request;
-- let Qwen3 select high-level tools;
+- let mistral select high-level tools;
 - execute deterministic EO analysis;
 - generate an evidence-grounded interpretation.
 <!--
@@ -123,7 +109,7 @@ Purpose:
                   ┌─────────────────┴─────────────────┐
                   │                                   │
                   ▼                                   ▼
-        Deterministic workflow                  Qwen3 / Ollama
+        Deterministic workflow                  ministral-3:8b3 / Ollama
                                                   orchestration
                   │                                   │
                   │                        ┌──────────┴──────────┐
@@ -161,7 +147,7 @@ Purpose:
                                            │
                                            ▼
 
-                             Qwen3 interpretation
+                             ministral-3:8b3 interpretation
 ```
 ## 3.1 Use-Case 2
 
@@ -200,7 +186,7 @@ User prompt ─ Agent ┤ Mistral
 
 The key design principle is:
 
-> **Measurements come from deterministic EO tools. Qwen3 orchestrates tools and interprets returned evidence; it must not invent EO measurements.**
+> **Measurements come from deterministic EO tools. ministral-3:8b3 orchestrates tools and interprets returned evidence; it must not invent EO measurements.**
 
 ---
 ## 3.2 Repository structure 
