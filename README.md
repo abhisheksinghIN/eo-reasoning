@@ -6,7 +6,10 @@
 
 > **How can Geo-Foundation Models enable deeper, evidence-grounded reasoning for Earth Observation?**
 
-Most EO foundation-model demonstrations focus on downstream prediction or feature extraction. GeoReason-EO explores a different direction: using a GeoFM representation as one component in a transparent reasoning system that combines:
+<img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/5e6a07e4-8f0e-4830-a0a8-806a04e54d5b" />
+
+
+Most EO foundation-model demonstrations focus on downstream prediction or feature extraction. EO-Reasoning explores a different direction: using a GeoFM representation as one component in a transparent reasoning system that combines:
 
 1. real EO observations;
 2. learned GeoFM representations;
