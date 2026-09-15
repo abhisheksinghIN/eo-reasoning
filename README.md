@@ -14,6 +14,9 @@ Most EO foundation-model demonstrations focus on downstream prediction or featur
 1. real EO observations;
 2. learned GeoFM representations;
 3. an LLM that orchestrates tools and explains evidence.
+
+<img width="1184" height="602" alt="image" src="https://github.com/user-attachments/assets/b8b5a0de-9603-4935-ad5e-793d1ef93047" />
+
 ---
 
 ## 1. Project status
