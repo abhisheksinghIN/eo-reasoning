@@ -8,8 +8,10 @@
 
 <!--
 <img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/5e6a07e4-8f0e-4830-a0a8-806a04e54d5b" />
--->
+
 <img width="1536" height="1024" alt="Designer" src="https://github.com/user-attachments/assets/f96c9a7a-c7ce-413c-ad08-028e4c3931f2" />
+-->
+<img width="2019" height="986" alt="image" src="https://github.com/user-attachments/assets/50133d23-97de-4f9e-93aa-44c13fec892a" />
 
 Most EO foundation-model demonstrations focus on downstream prediction or feature extraction. EO-Reasoning explores a different direction: using a GeoFM representation as one component in a transparent reasoning system that combines:
 
